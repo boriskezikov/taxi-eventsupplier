@@ -27,10 +27,14 @@ import org.springframework.retry.policy.SimpleRetryPolicy;
 import org.springframework.retry.support.RetryTemplate;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
 
 
 @Slf4j
@@ -40,6 +44,7 @@ import java.util.Map;
 public class KafkaConsumerConfiguration implements KafkaListenerConfigurer {
 
     private final LocalValidatorFactoryBean validator;
+    private final KafkaProducer kafkaProducer;
 
     @Value("${supplier_kafka.retry.backoff_policy.init_interval}")
     private Long initInterval;
@@ -94,6 +99,20 @@ public class KafkaConsumerConfiguration implements KafkaListenerConfigurer {
         factory.setMessageConverter(new StringJsonMessageConverter(objectMapper()));
         factory.setConsumerFactory(new DefaultKafkaConsumerFactory<>(props()));
         factory.setRetryTemplate(retryTemplate());
+        factory.setRecoveryCallback(context -> {
+            ConsumerRecord<?, ?> record = ((ConsumerRecord<?, ?>) context.getAttribute("record"));
+            Header[] headers = Objects.requireNonNull(record).headers().toArray();
+            UUID targetH = null;
+            for (Header h : headers) {
+                if (h.key().equals("messageRqId")) {
+                    targetH = UUID.fromString(new String(h.value(), StandardCharsets.UTF_8));
+                    break;
+                }
+            }
+            kafkaProducer.sentToStatusTopic(ProcessingStatus.PROCESSING_FAILED, targetH);
+            log.info("Retry count exceeded");
+            return Optional.empty();
+        });
         return factory;
     }
 
