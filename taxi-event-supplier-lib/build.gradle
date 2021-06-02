@@ -1,0 +1,57 @@
+plugins {
+    id 'io.spring.dependency-management' version '1.0.10.RELEASE'
+    id 'java'
+    id 'maven'
+    id 'maven-publish'
+}
+
+group 'ru.taxi.eventsupplier'
+version '1.0.0'
+
+repositories {
+    mavenCentral()
+}
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+    all {
+        resolutionStrategy.dependencySubstitution.all { dependency ->
+            if (dependency.requested instanceof ModuleComponentSelector && dependency.requested.module == 'spring-boot-starter-logging') {
+                dependency.useTarget("org.springframework.boot:spring-boot-starter-log4j2:$dependency.requested.version", 'Use Log4j2 instead of Logback')
+            }
+        }
+    }
+}
+
+dependencies {
+    compile 'org.springframework.kafka:spring-kafka:2.+'
+    implementation "org.projectlombok:lombok:1.18.+"
+    annotationProcessor "org.projectlombok:lombok:1.18.+"
+    compile 'com.fasterxml.jackson.core:jackson-databind:2.11.+'
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.12.+")
+
+}
+
+test {
+    useJUnitPlatform()
+}
+
+apply plugin: 'maven-publish'
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+        }
+    }
+    repositories {
+        maven {
+            name ''
+            url ""
+            credentials {
+                username System.getenv("USER")
+                password System.getenv("PASSWORD")
+            }
+        }
+    }
+}
