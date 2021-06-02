@@ -1,0 +1,37 @@
+server:
+  port: 8067
+
+hdfs:
+  host: "hdfs://localhost:9000"
+
+spring:
+  application:
+    name: taxi-metricapp
+supplier_kafka:
+  retry:
+    backoff_policy:
+      init_interval: ${KAFKA_BACKOFF_INIT_INTERVAL:10000}
+      multiplier: ${KAFKA_BACKOFF_MULTIPLIER:2}
+      max_interval: ${KAFKA_BACKOFF_MAX_INTERVAL:100000}
+    retry_policy:
+      max_attempts: ${KAFKA_RETRY_POLICY_MAX_ATTEMPTS:5}
+  bootstrap-servers: ${KAFKA_SERVER:localhost:9092}
+  consumer:
+    group-id: ${KAFKA_CONSUMER_GROUP_ID:smib-service-notifications-core-consumer-group}
+    max-poll-interval-ms: ${KAFKA_MAX-POLL-INTERVAL-MS:5000000}
+    max-poll-records: ${KAFKA_MAX_POLL_RECORDS:2}
+    session-timeout-ms: ${KAFKA_SESSION_TIMEOUT_MS:30000}
+    heartbeat-interval-ms: ${KAFKA_HEARTBEAT_INTERVAL_MS:25000}
+spark:
+  master: local[*]
+  driver:
+    maxResultSize: 0
+  executor:
+    maxResultSize: 0
+  sql:
+    execution:
+      arrow:
+        pyspark:
+          enabled: true
+          fallback:
+            enabled: true
